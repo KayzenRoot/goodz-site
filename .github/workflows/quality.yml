@@ -29,7 +29,7 @@ jobs:
       - name: Docker build and isolated restart smoke
         run: bash tools/ci_docker_smoke.sh
   browser-e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
