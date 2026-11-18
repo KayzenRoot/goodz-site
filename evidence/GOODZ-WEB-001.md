@@ -32,3 +32,32 @@
 - Com Uvicorn HTTP local real e cliente httpx (sem simular API): inicialização CLI, autenticação, CSRF, alteração de texto, upload PNG→WebP, CRUD de produto, logout e persistência SQLite **PASS**. Dados de teste foram criados em diretório temporário, sem produção.
 - Chromium E2E com servidor real **BLOCKED PELO AMBIENTE** (`ERR_BLOCKED_BY_ADMINISTRATOR`). Não reivindicar prova de navegador real.
 - Auditoria de segurança HIGH_ASSURANCE: revisão independente pendente; verificação de TLS/HSTS, cookie Secure sob domínio real, backup/restauração, limites do proxy, vulnerabilidades de dependências e smoke de recuperação continuam como gates explícitos. Sem autorização para publicar ou fundir PR.
+
+
+## Evidence Bundle de continuidade · GOODZ-WEB-001/CD-01 · 18/11/2026
+
+**Context Lock e proveniência**
+- Source Check: main 953a92dd2ff34189180f794a788a562ad71f96dc; branch PR #1 Draft HEAD inicial 6676edaa74f3651f52954f56ff2db6b3233ca542.
+- Hierarquia lida: checkpoint > Decisions Ledger > Scope > DoD > Architecture > Requirements > Security/Deployment/WO.
+- Decisões D001/D002 APPROVED mantidas; D003 PROPOSED e D004/D005/D006 OPEN, sem decisões presumidas.
+- Commits de continuidade: 051523c (validação Origin/Referer), 0d50804 (TLS/backup e harness E2E), 44859f6 (Docker/CI), f05f8f5 e d1a69e3 (correções demonstradas em CI), c09df4a (Chrome do runner).
+
+**Defeito adicional comprovado e correção mínima**
+- Preflight: Origin https://[bad em PUT /api/admin/settings com token válido causava ValueError e HTTP 500. Referer malformado igualmente.
+- Correção: capturar ValueError do urlsplit, responder HTTP 403 e impedir mutação. Regressão automatizada no mesmo teste e Work Order. Nenhuma funcionalidade nova.
+
+**Matriz de provas verificadas**
+- Local PYTHONPATH=. pytest -q: 13/13 PASS; Python compileall + node --check PASS.
+- GitHub Actions run 44335011085: job test SUCCESS, log 13 passed (Python 3.12); job container SUCCESS; job browser-e2e SUCCESS.
+- TLS: self-signed localhost com certificado verificado em httpx, COOKIE_SECURE=1, cookie Secure/HttpOnly/SameSite=Strict, CSRF contra origem diversa, CRUD, upload e logout PASS (não é CA pública).
+- Backup/recovery: sqlite3.Connection.backup em WAL + cópia de uploads durante janela sem escritas; PRAGMA quick_check ok; restauração em diretório isolado, texto/produto/WebP íntegros PASS. Backup offsite real NÃO verificado.
+- Docker: build e config compose, docker run local nonroot/read-only/no-new-privileges/cap_drop, bind 127.0.0.1, volume e restart PASS. Sem VPS ou serviços públicos.
+- E2E Chrome com servidor Uvicorn real e API sem mock: login, mudança hero_title, cadastro de dog com foto, vitrine desktop 1365px e mobile 390px, sem overflow horizontal, logout e reabertura não autenticada PASS.
+- Screenshots guardadas em https://github.com/KayzenRoot/goodz-site/actions/runs/44335011085/artifacts/14441071881; workflow https://github.com/KayzenRoot/goodz-site/actions/runs/44335011085.
+- A primeira tentativa de browser no ubuntu-26.04 falhou na instalação Playwright 1.57; correção limitada no CI foi utilizar Chrome já instalado no ubuntu-24.04. A segunda falha foi uma asserção que ignorava a quebra de linha visual do título, corrigida no harness. Não são falhas da landing.
+
+**Auditoria e bloqueios**
+- Scope R01-R08 permanece, sem checkout, pagamentos ou integrações. Nenhum link, preço ou contato fictício.
+- Pendente: revisão independente HIGH_ASSURANCE da autenticação, verificação HTTPS com domínio/chain/HSTS e reverse proxy REAL (inclusive tamanho máximo de corpo e IP real no rate limit), proteção do painel, análise de dependências, backup offsite cifrado com recuperação na VPS, dados comerciais reais, decisões D003-D006 e autorização expressa de deploy/merge.
+- Veredito: **BLOCKED para merge, publicação e RELEASE_COMPLETE**; correções de código e gates isolados PASS. **Checkpoint Delta PROPOSED**, sem editar ou promover docs/12-checkpoint.md.
+- Riscos de regressão restantes: configuração do proxy, versões de dependência sem lock, proteção de credenciais e retenção de backups; nenhum HIGH conhecido declarado como resolvido sem prova.

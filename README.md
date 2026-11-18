@@ -2,7 +2,7 @@
 
 Site institucional da marca GOODZ, com duas frentes independentes: **GOODZ Pastelaria** (iFood) e **GOODZ Dogueria** (99Food). Linguagem visual premium em grafite, dourado e creme, baseada na arte selecionada pelo proprietário.
 
-**Estado:** primeira versão funcional local, testes automatizados 11/11 PASS e imagens prévias desktop/mobile inspecionadas; **não está publicada na internet**. Não há URL oficial, preços nem WhatsApp inventados. Configure os links reais no painel.
+**Estado:** primeira versão funcional local, 13/13 testes automatizados PASS, CI Docker e E2E com backend real PASS e imagens prévias desktop/mobile inspecionadas; **não está publicada na internet**. Não há URL oficial, preços nem WhatsApp inventados. Configure os links reais no painel.
 
 ## Início rápido (Python 3.12+)
 
@@ -50,3 +50,7 @@ Sem carrinho, pagamento, sistema de pedidos, integrações com agregadores, edit
 ## Prévia visual local (opcional)
 
 Com Chromium e Playwright para Python instalados, execute `PYTHONPATH=. python tools/visual_preview.py`. Ele usa respostas de API simuladas para validar layout e navegação básica do painel; os testes reais de API ficam em `tests/`. Consulte `evidence/GOODZ-WEB-001.md`.
+
+## Qualificação de pré-deploy (GOODZ-WEB-001/CD-01)
+
+O workflow de PR executa 3 gates independentes: testes Python + TLS local autoassinado + restauração SQLite/arquivos; build Docker em loopback e volume persistente; Playwright com backend Uvicorn real e Chrome no runner Ubuntu 24.04. Resultados e capturas: https://github.com/KayzenRoot/goodz-site/actions/runs/44335011085. **Nada foi implantado publicamente.** Reverse proxy HTTPS real, domínio, senhas de produção, links comerciais e backup cifrado externo precisam de validação independente antes do merge/deploy.

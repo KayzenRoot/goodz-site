@@ -1,2 +1,9 @@
 # Security
 Conta única, senha scrypt com sal aleatório, sem credencial padrão, sessões aleatórias de 256 bits (apenas hash guardado em DB) com expiração, cookies HttpOnly/SameSite=Strict; Secure em HTTPS via `COOKIE_SECURE=1`. Escritas exigem token CSRF e mesma origem. Login limitado por IP. Upload com teto de arquivo 8 MB; middleware exige sessão + CSRF antes do parsing multipart, recusa transfer encoding e Content-Length ausente e bloqueia corpo declarado acima de 8 MB + 128 KiB de overhead; decodificação real por Pillow, formatos PNG/JPEG/WebP e sanitização via reencode WebP. URLs externos validados em http(s); headers de segurança e CSP. Obrigatório antes de exposição pública: HTTPS, backup/restauração testada, firewall, atualização, limites de corpo de requisição no reverse proxy (independentes do limite da aplicação) e verificação dos cookies Secure/HSTS. Riscos residuais: autenticação de fator único, ausência de antivírus externo, limites de segurança de CDN/WAF dependem do deploy.
+
+
+## Auditoria de continuidade GOODZ-WEB-001/CD-01
+- Regressão comprovada e corrigida: uma string de Origin/Referer com URL IPv6 inválida causava ValueError e 500 na validação da sessão; agora devolve 403 sem escrever dados (teste autenticado).
+- Evidência isolada: HTTPS Uvicorn com certificado autoassinado efêmero e verificação de certificado no cliente, cookies Secure/HttpOnly/SameSite=Strict, checagem CSRF/origem, upload e logout PASS.
+- Evidência CI: container não root, rootfs read-only, bind apenas 127.0.0.1 e persistência de SQLite após restart PASS. Navegação Chrome em desktop/mobile com backend real, login, conteúdo, imagens e logout PASS.
+- Riscos pendentes: revisão independente da autenticação, análise de dependências e proxy real (Host, client IP, rate limit, TLS/HSTS, body limit), backups offsite cifrados e restauração operacional da VPS. Não tratar testes locais como autorização de produção.

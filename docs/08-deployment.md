@@ -15,3 +15,11 @@ Local: Python virtualenv + uvicorn. VPS: `docker compose`, com `data/` volume pe
 7. Fazer rollback sem expor credenciais: desligar tráfego do app, restaurar versão de imagem/backup da aplicação isoladamente e revalidar a saúde e o conteúdo; reversão de DNS só com autorização explícita.
 
 **O limite de upload do middleware usa Content-Length e não substitui o limite do reverse proxy.** Não aceitar tráfego público sem limite independente configurado e verificado. A rota `/health` só indica processo vivo, não confirma integridade do banco, portanto verifique também `/api/site` no smoke test.
+
+
+## Gates de qualificação reproduzidos no CI (não são deploy)
+- Run https://github.com/KayzenRoot/goodz-site/actions/runs/44335011085: jobs test/container/browser-e2e SUCCESS (dados de teste e loopback).
+- test: 13/13 Python 3.12, regressões auth e Origin, TLS autoassinado, recuperação SQLite WAL + uploads, compilação e sintaxe JavaScript.
+- container: docker build, docker compose config, runtime user goodz sem privilégios, rootfs somente leitura, porta 127.0.0.1 e persistência de configuração após reinício.
+- browser-e2e: Chrome do Ubuntu 24.04, Uvicorn real em localhost, fluxo login/edição/upload/produto/logout e verificação desktop/mobile. Screenshots no artefato do workflow.
+- Exposição pública: BLOQUEADA. Ainda exigidos: domínio e links reais aprovados; proxy reverso em TLS com cadeia válida, redirect e HSTS; configuração de COOKIE_SECURE=1; rate limit que preserve IP real apenas atrás de proxy de confiança; limite de corpo no proxy; backup periódico criptografado fora do host, restauração ensaiada em destino isolado; verificação de segurança independente e smoke-test HTTPS de produção autorizado. Proibir mudança de DNS, credenciais reais ou publicação enquanto D003-D006 estiverem pendentes.

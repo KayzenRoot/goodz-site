@@ -19,3 +19,12 @@ STOP CONDITION: sem avanço para checkout, integração, produção ou ações d
 - Fora do escopo: e-commerce, deploy, novos serviços, rotas comerciais fictícias ou publicação.
 - Critérios: links malformados retornam 422 sem 500; produto em branco retorna 422 sem gravar; upload sem autenticação e com corpo declarado acima do limite é recusado antes do parser multipart.
 - Testes: regressões Pytest, compilação e sintaxe JS; CI na própria PR. Auditoria/Checkpoint Delta somente após provas; sem merge automático.
+
+
+## Continuidade do MESMO Work Order/CD-01 (context lock renovado)
+- BASE main: 953a92dd2ff34189180f794a788a562ad71f96dc. HEAD de entrada: 6676edaa74f3651f52954f56ff2db6b3233ca542. Branch permanece feat/goodz-web-001-landing-admin, PR #1 Draft.
+- Defeito adicional comprovado: Origin/Referer malformado causava 500. Ajuste necessário: parse protegido com 403, sem mutação. Regredir ambos os headers.
+- Sem novos recursos: somente provas técnicas dos acceptance criteria R03/R06/R07/R08, nos ambientes locais efêmeros, e gate CI de Docker/Chrome.
+- TESTS: 13/13 pytest, TLS local, WAL online backup/restore, Docker startup/restart, browser E2E real, JS syntax. Evidence Bundle em evidence/GOODZ-WEB-001.md; CI run 44335011085.
+- REVIEW FORMAT: auditoria pt-BR com PASS / BLOCKED por gate, riscos e Checkpoint Delta meramente PROPOSTO.
+- STOP CONDITION: sem promoção do checkpoint, merge, domínio, DNS, deploy ou senha operacional sem auditoria independente e autorização.
