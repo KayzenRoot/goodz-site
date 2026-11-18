@@ -3,11 +3,11 @@ on:
   push:
     branches: [main]
   pull_request:
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -16,7 +16,37 @@ jobs:
           cache: pip
       - name: Dependencies
         run: pip install -r requirements-dev.txt
-      - name: Tests
+      - name: Unit, security, TLS and backup restore
         run: PYTHONPATH=. pytest -q
       - name: Compile all Python
-        run: python -m compileall -q app
+        run: python -m compileall -q app tests tools
+      - name: JavaScript syntax
+        run: node --check static/scripts/admin.js && node --check static/scripts/site.js
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker build and isolated restart smoke
+        run: bash tools/ci_docker_smoke.sh
+  browser-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install backend and Playwright
+        run: pip install -r requirements-dev.txt playwright==1.57.0
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Live backend desktop/mobile E2E
+        run: PYTHONPATH=. python tools/e2e_browser.py
+      - name: Publish isolated E2E screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goodz-browser-e2e
+          path: .artifacts/*.png
+          if-no-files-found: ignore
+          retention-days: 7
