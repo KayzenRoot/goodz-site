@@ -33,7 +33,7 @@ def main():
                 except httpx.TransportError:time.sleep(.15)
             else:raise RuntimeError('Backend did not start')
             with sync_playwright() as pw:
-                browser=pw.chromium.launch(headless=True)
+                browser=pw.chromium.launch(headless=True,channel='chrome')
                 try:
                     admin=browser.new_page(viewport={'width':1365,'height':875})
                     admin.goto(origin+'/admin',wait_until='networkidle')
