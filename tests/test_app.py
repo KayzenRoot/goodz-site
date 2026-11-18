@@ -108,3 +108,63 @@ def test_origin_mismatch_rejected(client,tmp_path):
         db.execute('INSERT INTO admin_auth VALUES(1,?)',(password_hash('uma-senha-muito-forte-123'),))
     token=login(client).json()['csrf']
     assert client.put('/api/admin/settings',headers={'x-csrf-token':token,'origin':'https://evil.example'},json={'values':{'hero_title':'X'}}).status_code==403
+
+
+def test_reject_malformed_external_links_without_server_error(client, tmp_path):
+    with connect(tmp_path/'goodz.sqlite3') as db:
+        db.execute('INSERT INTO admin_auth VALUES(1,?)', (password_hash('uma-senha-muito-forte-123'),))
+    token = login(client).json()['csrf']
+    headers = {'x-csrf-token': token}
+    for invalid in ('https://[invalid', 'https://example.com:abc',
+                    'https://example.com:99999', 'https://example.com:0'):
+        response = client.put('/api/admin/settings', json={'values': {'ifood_url': invalid}}, headers=headers)
+        assert response.status_code == 422, (invalid, response.status_code)
+    assert client.get('/api/site').json()['settings']['ifood_url'] == ''
+    assert client.put('/api/admin/settings', json={'values': {'ifood_url': 'https://example.com:443/delivery'}}, headers=headers).status_code == 200
+
+
+def test_product_names_cannot_be_whitespace_only(client, tmp_path):
+    with connect(tmp_path/'goodz.sqlite3') as db:
+        db.execute('INSERT INTO admin_auth VALUES(1,?)', (password_hash('uma-senha-muito-forte-123'),))
+    token = login(client).json()['csrf']
+    headers = {'x-csrf-token': token}
+    product = {'category': 'pastelaria', 'name': 'Pastel válido'}
+    created = client.post('/api/admin/products', json=product, headers=headers)
+    assert created.status_code == 201
+    ident = created.json()['id']
+    for invalid in (' ', '\t \n'):
+        product['name'] = invalid
+        assert client.post('/api/admin/products', json=product, headers=headers).status_code == 422
+        assert client.put('/api/admin/products/' + ident, json=product, headers=headers).status_code == 422
+    assert [p['name'] for p in client.get('/api/site').json()['products']] == ['Pastel válido']
+
+
+def test_upload_requires_auth(client):
+    uploaded = {'file': ('image.png', b'not-an-image', 'image/png')}
+    assert client.post('/api/admin/upload', files=uploaded).status_code == 401
+    # This only proves handler-level rejection, not an upstream reverse-proxy limit.
+    assert client.get('/api/site').status_code == 200
+
+
+def test_upload_request_rejected_before_multipart_parsing(client, tmp_path, monkeypatch):
+    from starlette.formparsers import MultiPartParser
+
+    def parser_should_not_run(*_args, **_kwargs):
+        raise AssertionError('multipart body was parsed before auth/size checks')
+
+    monkeypatch.setattr(MultiPartParser, 'parse', parser_should_not_run)
+    file = {'file': ('image.png', b'tiny', 'image/png')}
+    response = client.post('/api/admin/upload', files=file)
+    assert response.status_code == 401
+    assert response.headers['x-content-type-options'] == 'nosniff'
+
+    with connect(tmp_path/'goodz.sqlite3') as db:
+        db.execute('INSERT INTO admin_auth VALUES(1,?)', (password_hash('uma-senha-muito-forte-123'),))
+    token = login(client).json()['csrf']
+    response = client.post('/api/admin/upload',
+        headers={'x-csrf-token': token, 'content-length': str(10 * 1024 * 1024)}, files=file)
+    assert response.status_code == 413
+    assert response.headers['cache-control'] == 'no-store'
+    response = client.post('/api/admin/upload',
+        headers={'x-csrf-token': token, 'origin': 'https://evil.example'}, files=file)
+    assert response.status_code == 403

@@ -103,8 +103,15 @@ def valid_url(value: str) -> bool:
         return True
     if len(value) > 600 or any(ch.isspace() for ch in value):
         return False
-    parts = urlsplit(value)
-    return parts.scheme in {'http', 'https'} and bool(parts.hostname) and not parts.username and not parts.password
+    try:
+        parts = urlsplit(value)
+        hostname = parts.hostname
+        port = parts.port  # Access validates that any explicit port is numeric and in range.
+    except ValueError:
+        return False
+    return (parts.scheme in {'http', 'https'} and bool(hostname)
+            and parts.username is None and parts.password is None
+            and (port is None or port > 0))
 
 def image_url(value: str) -> bool:
     return value.startswith('/assets/') or bool(re.fullmatch(r'/uploads/[a-f0-9]{32}\.webp', value))
@@ -144,7 +151,27 @@ def create_app(data_path: Path | None = None) -> FastAPI:
 
     @app.middleware('http')
     async def secure_headers(request: Request, call_next):
-        response = await call_next(request)
+        response = None
+        if request.method == 'POST' and request.url.path == '/api/admin/upload':
+            # Authenticate before Starlette parses multipart input into temporary files.
+            # Require a bounded body even before image decoding; the reverse proxy
+            # must apply an independent upload limit as defense in depth.
+            try:
+                current_session(request, csrf=True)
+            except HTTPException as error:
+                response = JSONResponse({'detail': error.detail}, status_code=error.status_code)
+            if response is None:
+                length = request.headers.get('content-length')
+                try:
+                    declared = int(length) if length is not None else -1
+                except ValueError:
+                    declared = -1
+                if declared < 0 or request.headers.get('transfer-encoding'):
+                    response = JSONResponse({'detail': 'Tamanho do envio obrigatório.'}, status_code=411)
+                elif declared > MAX_UPLOAD + 128 * 1024:
+                    response = JSONResponse({'detail': 'Arquivo excede o limite de envio.'}, status_code=413)
+        if response is None:
+            response = await call_next(request)
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
@@ -278,6 +305,8 @@ def create_app(data_path: Path | None = None) -> FastAPI:
         return {'url': f'/uploads/{filename}'}
 
     def validate_product(p: ProductRequest):
+        if not p.name.strip():
+            raise HTTPException(422, 'Informe um nome válido para o produto.')
         if p.category not in CATEGORIES:
             raise HTTPException(422, 'Categoria inválida.')
         if p.image_url and not image_url(p.image_url):
