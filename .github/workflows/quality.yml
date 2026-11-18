@@ -1,0 +1,132 @@
+name: GOODZ Quality
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Unit, security, TLS and backup restore
+        run: PYTHONPATH=. pytest -q
+      - name: Compile all Python
+        run: python -m compileall -q app tests tools
+      - name: JavaScript syntax
+        run: node --check static/scripts/admin.js && node --check static/scripts/site.js
+  security:
+    runs-on: ubuntu-24.04
+    env:
+      REPORT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install production dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Install pinned security tooling
+        run: |
+          python -m venv .tools
+          .tools/bin/python -m pip install --disable-pip-version-check -r ops/requirements-security.txt
+      - name: Prepare reports directory
+        run: mkdir -p reports
+      - name: SCA production dependencies
+        id: sca_prod
+        continue-on-error: true
+        run: .tools/bin/pip-audit -r requirements.txt --format=json --output=reports/pip-audit-prod.json
+      - name: SCA development dependencies
+        id: sca_dev
+        continue-on-error: true
+        run: .tools/bin/pip-audit -r requirements-dev.txt --format=json --output=reports/pip-audit-dev.json
+      - name: SAST report (all severities)
+        run: .tools/bin/bandit -r app -f json -o reports/bandit.json --exit-zero
+      - name: CycloneDX SBOM
+        run: .tools/bin/cyclonedx-py requirements requirements.txt --of json --output-reproducible -o reports/sbom.cdx.json
+      - name: License inventory
+        run: .tools/bin/pip-licenses --python .venv/bin/python --format=json --with-license-file --no-license-path --output-file reports/licenses.json
+      - name: Build provenance
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          provenance = {
+              "commit": os.environ["REPORT_COMMIT"],
+              "merge_commit": os.environ["GITHUB_SHA"],
+              "pull_request": os.environ.get("PR_NUMBER", ""),
+              "ref": os.environ["GITHUB_REF"],
+              "workflow": os.environ["GITHUB_WORKFLOW"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "event": os.environ["GITHUB_EVENT_NAME"],
+          }
+          with open("reports/provenance.json", "w", encoding="utf-8") as handle:
+              json.dump(provenance, handle, indent=2, sort_keys=True)
+              handle.write("\n")
+          PY
+      - name: Validate reports (fail closed)
+        run: python tools/validate_security_reports.py reports
+      - name: Publish security reports by commit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goodz-security-${{ env.REPORT_COMMIT }}
+          path: reports/
+          if-no-files-found: error
+          retention-days: 90
+  container:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            reproducibility: true
+          - runner: ubuntu-24.04-arm
+            reproducibility: false
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify pinned base image digest and architectures
+        run: bash tools/verify_base_image.sh
+      - name: Docker build and isolated restart smoke
+        run: bash tools/ci_docker_smoke.sh
+      - name: Reproducible Python and package closure
+        if: matrix.reproducibility
+        run: bash tools/check_image_reproducibility.sh goodz-audit:ci
+  browser-e2e:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install backend and Playwright
+        run: |
+          pip install -r requirements-dev.txt
+          pip install playwright==1.57.0
+      - name: Verify preinstalled Chrome
+        run: google-chrome --version
+      - name: Live backend desktop/mobile E2E
+        run: PYTHONPATH=. python tools/e2e_browser.py
+      - name: Publish isolated E2E screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goodz-browser-e2e
+          path: .artifacts/*.png
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 7

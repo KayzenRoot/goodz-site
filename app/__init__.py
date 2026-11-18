@@ -1,0 +1,1 @@
+"""GOODZ web application."""
