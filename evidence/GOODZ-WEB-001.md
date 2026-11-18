@@ -1,0 +1,16 @@
+# Evidence Bundle · GOODZ-WEB-001 (proposta de revisão)
+- Base Git: `953a92dd2ff34189180f794a788a562ad71f96dc` (Source Pack no main)
+- Work Order: `GOODZ-WEB-001`
+- Scope: landing GOODZ, Pastelaria, Dogueria; admin de imagens/textos/produtos/links; FastAPI/SQLite/Docker.
+- Arte: conceito 1 selecionado pelo proprietário, logos/imagens/favicons da conversa, arquivos versionados em `static/assets/`.
+- Arquitetura: backend FastAPI + SQLite local, imagens normalizadas Pillow para WebP e servidas de diretório persistente.
+- Segurança: sem senha padrão, hash scrypt, sessão aleatória com hash armazenado, HttpOnly/SameSite=Strict, Secure no HTTPS configurado, CSRF, verificação de origem, limitação por IP, upload PNG/JPEG/WebP validado, CSP e DOM seguro.
+- Testes locais: `PYTHONPATH=. pytest -q` = **7 PASS**; `python -m compileall -q app` = **PASS**.
+- Verificação visual: screenshots estáticos desktop 1440px e mobile 390px renderizados via Chromium com CSS e imagens originais embutidos; nenhuma rolagem horizontal detectada. Não substitui E2E com backend real em HTTPS.
+- CI: `.github/workflows/quality.yml` criada para Python 3.12; resultado remoto deve ser lido após PR.
+- Docker build: NÃO EXECUTADO neste ambiente; não alegar conformidade de container.
+- Segurança operacional: classificar autenticação administrativa como HIGH_ASSURANCE. Revisão independente, senha de produção, HTTPS, backup/restauração e smoke test remoto pendentes.
+- Dados comerciais reais: links iFood/99Food, redes e produtos/preços não inventados; campos editáveis.
+- Riscos: single admin password, proteção por IP atrás de proxy, persistência SQLite em volume confiável, backups não configurados.
+- Checkpoint Delta PROPOSED: SOURCE_PACK_CREATED -> LOCAL_TESTED; manter RELEASE_COMPLETE=false, PUBLIC_DEPLOY_BLOCKED.
+- Veredito atual: **CORRECTION/VALIDATION PENDING** para produção. Sem autorização para alterar DNS ou realizar deploy público.

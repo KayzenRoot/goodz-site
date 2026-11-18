@@ -41,7 +41,7 @@ Para exposição pública, configure **um reverse proxy HTTPS** (Caddy/Nginx), `
 
 ## Escopo
 
-Sem carrinho, pagamento, sistema de pedidos, integrações com agregadores, editor drag-and-drop ou multiusuário. O conteúdo público é responsivo e sem dependências JS de terceiros. Produtos iniciais são **exemplos ilustrativos** sem preço, substituíveis no admin.
+Sem carrinho, pagamento, sistema de pedidos, integrações com agregadores, editor drag-and-drop ou multiusuário. O conteúdo público é responsivo e sem dependências JS de terceiros. A vitrine começa vazia para não inventar produtos ou preços; cadastre os produtos reais no painel.
 
 ## Hierarquia de fontes
 

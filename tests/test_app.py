@@ -86,3 +86,25 @@ def test_upload_mime_and_product_validation(client,tmp_path):
     assert client.post('/api/admin/upload',headers=h,files={'file':('x.svg',b'<svg></svg>','image/svg+xml')}).status_code==415
     assert client.post('/api/admin/products',json={'category':'invalida','name':'X'},headers=h).status_code==422
     assert client.post('/api/admin/products',json={'category':'pastelaria','name':'X','image_url':'https://evil.com/a.png'},headers=h).status_code==422
+
+
+def test_restart_persists_settings_and_products(tmp_path):
+    app = create_app(tmp_path)
+    with TestClient(app) as c:
+        with connect(tmp_path/'goodz.sqlite3') as db:
+            db.execute('INSERT INTO admin_auth VALUES(1,?)',(password_hash('uma-senha-muito-forte-123'),))
+        token=login(c).json()['csrf']
+        h={'x-csrf-token':token}
+        c.put('/api/admin/settings',headers=h,json={'values':{'hero_title':'GOODZ após reinício'}})
+        c.post('/api/admin/products',headers=h,json={'category':'dogueria','name':'Produto de teste','description':'persistência','visible':True})
+    with TestClient(create_app(tmp_path)) as reopened:
+        result=reopened.get('/api/site').json()
+        assert result['settings']['hero_title']=='GOODZ após reinício'
+        assert len(result['products'])==1
+        assert result['products'][0]['name']=='Produto de teste'
+
+def test_origin_mismatch_rejected(client,tmp_path):
+    with connect(tmp_path/'goodz.sqlite3') as db:
+        db.execute('INSERT INTO admin_auth VALUES(1,?)',(password_hash('uma-senha-muito-forte-123'),))
+    token=login(client).json()['csrf']
+    assert client.put('/api/admin/settings',headers={'x-csrf-token':token,'origin':'https://evil.example'},json={'values':{'hero_title':'X'}}).status_code==403

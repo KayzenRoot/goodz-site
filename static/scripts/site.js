@@ -2,6 +2,18 @@
 const byId = id => document.getElementById(id);
 const setText = (id, value) => { if (byId(id) && value !== undefined) byId(id).textContent = value; };
 const setImage = (id, src) => { if (byId(id) && /^\/(assets|uploads)\/[\w./-]+$/.test(src || '')) byId(id).src = src; };
+function setHeroTitle(value) {
+  if (!value) return;
+  const words = value.trim().split(/\s+/);
+  const h = byId('hero-heading'); h.replaceChildren();
+  if (words.length < 2) { h.textContent = value; return; }
+  const prefix = words.slice(0, -2).join(' ');
+  if (prefix) h.append(document.createTextNode(prefix + ' '));
+  const accent = document.createElement('em'); accent.textContent = words[words.length - 2]; h.append(accent, document.createElement('br'));
+  const tail = words[words.length - 1], parts = tail.match(/^(.*?)([.!?])$/);
+  h.append(document.createTextNode(parts ? parts[1] : tail));
+  if (parts) { const dot = document.createElement('span'); dot.className = 'gold-point'; dot.textContent = parts[2]; h.append(dot); }
+}
 const labelLinks = [ ['instagram_url', 'Instagram'], ['tiktok_url', 'TikTok'], ['whatsapp_url', 'WhatsApp'] ];
 let products = [], selected = 'todos';
 function renderProducts() {
@@ -41,7 +53,8 @@ async function boot() {
   try {
     const res = await fetch('/api/site'); if (!res.ok) throw new Error('Falha ao carregar o conteúdo');
     const {settings:s, products:items} = await res.json();
-    [ ['hero-heading','hero_title'], ['hero-desc','hero_description'], ['pastelaria-title','pastelaria_title'], ['pastelaria-desc','pastelaria_description'], ['dogueria-title','dogueria_title'], ['dogueria-desc','dogueria_description'], ['about-text','about_text'], ['address-text','address_text'] ].forEach(([id,k]) => setText(id,s[k]));
+    [ ['hero-desc','hero_description'], ['pastelaria-title','pastelaria_title'], ['pastelaria-desc','pastelaria_description'], ['dogueria-title','dogueria_title'], ['dogueria-desc','dogueria_description'], ['about-text','about_text'], ['address-text','address_text'] ].forEach(([id,k]) => setText(id,s[k]));
+    setHeroTitle(s.hero_title);
     [ ['nav-logo','logo_goodz'], ['footer-logo','logo_goodz'], ['about-logo','logo_goodz'], ['hero-image','hero_image'], ['pastelaria-logo','logo_pastelaria'], ['dogueria-logo','logo_dogueria'], ['pastelaria-image','pastelaria_image'], ['dogueria-image','dogueria_image'] ].forEach(([id,k]) => setImage(id,s[k]));
     applyLink('ifood-link','ifood-wait',s.ifood_url); applyLink('food99-link','food99-wait',s.food99_url);
     const social = byId('social-links'); social.replaceChildren();
