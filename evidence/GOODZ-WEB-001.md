@@ -1,16 +1,15 @@
-# Evidence Bundle · GOODZ-WEB-001 (proposta de revisão)
-- Base Git: `953a92dd2ff34189180f794a788a562ad71f96dc` (Source Pack no main)
-- Work Order: `GOODZ-WEB-001`
-- Scope: landing GOODZ, Pastelaria, Dogueria; admin de imagens/textos/produtos/links; FastAPI/SQLite/Docker.
-- Arte: conceito 1 selecionado pelo proprietário, logos/imagens/favicons da conversa, arquivos versionados em `static/assets/`.
-- Arquitetura: backend FastAPI + SQLite local, imagens normalizadas Pillow para WebP e servidas de diretório persistente.
-- Segurança: sem senha padrão, hash scrypt, sessão aleatória com hash armazenado, HttpOnly/SameSite=Strict, Secure no HTTPS configurado, CSRF, verificação de origem, limitação por IP, upload PNG/JPEG/WebP validado, CSP e DOM seguro.
-- Testes locais: `PYTHONPATH=. pytest -q` = **7 PASS**; `python -m compileall -q app` = **PASS**.
-- Verificação visual: screenshots estáticos desktop 1440px e mobile 390px renderizados via Chromium com CSS e imagens originais embutidos; nenhuma rolagem horizontal detectada. Não substitui E2E com backend real em HTTPS.
-- CI: `.github/workflows/quality.yml` criada para Python 3.12; resultado remoto deve ser lido após PR.
-- Docker build: NÃO EXECUTADO neste ambiente; não alegar conformidade de container.
-- Segurança operacional: classificar autenticação administrativa como HIGH_ASSURANCE. Revisão independente, senha de produção, HTTPS, backup/restauração e smoke test remoto pendentes.
-- Dados comerciais reais: links iFood/99Food, redes e produtos/preços não inventados; campos editáveis.
-- Riscos: single admin password, proteção por IP atrás de proxy, persistência SQLite em volume confiável, backups não configurados.
-- Checkpoint Delta PROPOSED: SOURCE_PACK_CREATED -> LOCAL_TESTED; manter RELEASE_COMPLETE=false, PUBLIC_DEPLOY_BLOCKED.
-- Veredito atual: **CORRECTION/VALIDATION PENDING** para produção. Sem autorização para alterar DNS ou realizar deploy público.
+# Evidence Bundle · GOODZ-WEB-001
+
+- Source Pack base SHA: `953a92dd2ff34189180f794a788a562ad71f96dc`.
+- Head SHA (PR #1): `856c7527bd29b7873be4b5df24e1d83f2f951840` na primeira avaliação.
+- Escopo: landing responsiva para marca GOODZ e submarcas; painel autenticado de textos, imagens, produtos e URLs; FastAPI, SQLite, Docker.
+- Design: conceito 1, preto/grafite/dourado/creme, logos e mockups fornecidos na conversa e versionados.
+- Segurança: sem senha default, scrypt, sessões hash/HttpOnly, SameSite Strict, CSRF, origem, rate limit, CSP, validação upload e reencode WebP.
+- Local Python: `PYTHONPATH=. pytest -q` **7/7 PASS**; `python -m compileall -q app` PASS.
+- GitHub Actions: **SUCCESS**, workflow GOODZ Quality, run **44322722923**, GitHub Python 3.12.
+- Visual: Chromium desktop 1440 e mobile 390 sem overflow; painel abre e alterna abas em preview com backend simulado, NÃO é E2E remoto. Imagens `preview-*.webp`.
+- Docker build e teste de restauração de backup: NÃO EXECUTADOS.
+- Risco: HIGH_ASSURANCE para acesso administrativo. Antes da produção, confirmar HTTPS, senha de proprietário, backup/restore, revisão independente de auth e smoke remoto.
+- Dados comerciais: não criar preços ou produtos fictícios, links para delivery e redes aguardam configuração real.
+- Verdict: LOCAL_TESTED + CI_PASS, mas **PUBLIC_DEPLOY_BLOCKED**, merge condicionado à auditoria; não chamar RELEASE_COMPLETE.
+- Proposed Checkpoint Delta após aprovação: site local funcional e CI 7/7; manter deploy bloqueado até evidências de produção.
