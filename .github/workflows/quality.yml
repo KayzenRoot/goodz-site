@@ -24,6 +24,8 @@ jobs:
         run: node --check static/scripts/admin.js && node --check static/scripts/site.js
   security:
     runs-on: ubuntu-24.04
+    env:
+      REPORT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -54,12 +56,16 @@ jobs:
       - name: License inventory
         run: .tools/bin/pip-licenses --python .venv/bin/python --format=json --with-license-file --no-license-path --output-file reports/licenses.json
       - name: Build provenance
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           python - <<'PY'
           import json
           import os
           provenance = {
-              "commit": os.environ["GITHUB_SHA"],
+              "commit": os.environ["REPORT_COMMIT"],
+              "merge_commit": os.environ["GITHUB_SHA"],
+              "pull_request": os.environ.get("PR_NUMBER", ""),
               "ref": os.environ["GITHUB_REF"],
               "workflow": os.environ["GITHUB_WORKFLOW"],
               "run_id": os.environ["GITHUB_RUN_ID"],
@@ -76,7 +82,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: goodz-security-${{ github.sha }}
+          name: goodz-security-${{ env.REPORT_COMMIT }}
           path: reports/
           if-no-files-found: error
           retention-days: 90
