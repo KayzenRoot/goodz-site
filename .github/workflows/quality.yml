@@ -49,4 +49,5 @@ jobs:
           name: goodz-browser-e2e
           path: .artifacts/*.png
           if-no-files-found: ignore
+          include-hidden-files: true
           retention-days: 7

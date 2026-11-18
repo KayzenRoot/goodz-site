@@ -61,7 +61,7 @@ def main():
                     for width,height,label in ((1365,875,'desktop'),(390,844,'mobile')):
                         page=browser.new_page(viewport={'width':width,'height':height})
                         page.goto(origin+'/',wait_until='networkidle')
-                        assert 'GOODZ E2E real' in page.locator('#hero-heading').inner_text()
+                        assert 'GOODZ E2E real' in ' '.join(page.locator('#hero-heading').inner_text().split())
                         assert page.locator('#product-grid').get_by_text('Hot dog E2E').is_visible()
                         assert not page.evaluate(
                             'document.documentElement.scrollWidth > document.documentElement.clientWidth')
