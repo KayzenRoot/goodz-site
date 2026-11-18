@@ -64,7 +64,7 @@
 
 ## Correction Delta GZ-SEC-001 F01/F02 + R01 — 18/11/2026
 
-**Autorização delimitada:** GOODZ-WEB-001/CD-01, PR #1 Draft, branch `feat/goodz-web-001-landing-admin`. Base main `953a92dd2ff34189180f794a788a562ad71f96dc`; HEAD de entrada `8c891b3388263231596984e1bfde0db1ddb8dff9`; ambos revalidados antes da edição. Sem merge, deploy, DNS, VPS, segredos ou promoção de checkpoint.
+**Autorização delimitada:** GOODZ-WEB-001/CD-01, PR #1 Draft, branch `feat/goodz-web-001-landing-admin`. Base main `953a92dd2ff34189180f794a788a562ad71f96dc`; HEAD de entrada `8c891b3388263231596984e1bfde0db1ddb8dff9`; HEAD deste delta `03d6b492104dd90474d22224b72f795c9c436404`; ambos revalidados antes da edição. Sem merge, deploy, DNS, VPS, segredos ou promoção de checkpoint.
 
 ### F01 — cadeia de dependências e relatórios por commit
 
@@ -74,7 +74,7 @@
 - SBOM CycloneDX 1.6 com 22 componentes e inventário de licenças de 21 pacotes de produção.
 - `tools/validate_security_reports.py` falha fechado para relatório ausente/corrompido, vulnerabilidade conhecida, SAST HIGH, SBOM inválido, licença desconhecida e proveniência incompleta.
 - Artefato `goodz-security-<sha>` com retenção de 90 dias, contendo os relatórios e `provenance.json` com commit, ref, workflow e run.
-- Resultado local observado: `SCA(production) packages=21 vulnerabilities=0; SCA(development) packages=29 vulnerabilities=0; SAST findings=1 high=0; SBOM components=22; licenses packages=21 unknown=0; SECURITY_REPORTS_OK`.
+- Resultado local observado (Windows; uvloop é marcado por plataforma e não entra no audit local): `SCA(production) packages=21 vulnerabilities=0; SCA(development) packages=29 vulnerabilities=0; SAST findings=1 high=0; SBOM components=22; licenses packages=21 unknown=0; SECURITY_REPORTS_OK`.
 - O único achado SAST é B608 MEDIUM em `app/main.py:215`; o trecho monta `WHERE visible=1` a partir de constante interna, não de entrada do usuário. Não foi suprimido; permanece visível no relatório e não é HIGH.
 
 ### F02 — imagem-base fixada e multi-arquitetura
@@ -102,6 +102,18 @@
 - `tools/ci_docker_smoke.sh`: PASS com `GITHUB_RUN_ID` definido; a invocação local sem a variável produz nome de volume inválido, comportamento pré-existente do harness, não introduzido por este delta.
 - `tools/check_image_reproducibility.sh`: PASS.
 - Docker build arm64 por emulação: PASS e health 200.
+
+### CI remota no HEAD 03d6b49
+
+Run [44400617794](https://github.com/KayzenRoot/goodz-site/actions/runs/44400617794) no HEAD `03d6b492104dd90474d22224b72f795c9c436404`, PR #1:
+
+- `security` SUCCESS (job 135142289248): `SCA(production) packages=22 vulnerabilities=0; SCA(development) packages=29 vulnerabilities=0; SAST findings=1 high=0; SBOM components=22; licenses packages=22 unknown=0; SECURITY_REPORTS_OK`.
+- Artefato `goodz-security-03d6b492104dd90474d22224b72f795c9c436404` (id 14472154679), 64.768 bytes, não expirado; `provenance.json` confirma commit `03d6b49…`, merge commit `8ce4664…`, PR 1, run 44400617794.
+- `container (ubuntu-latest, true)` SUCCESS (job 135142289364): `BASE_IMAGE_OK`, `Docker PASS`, `IMAGE_REPRO_OK packages=23`.
+- `container (ubuntu-24.04-arm, false)` SUCCESS (job 135142289025): `BASE_IMAGE_OK`, `Docker PASS` com wheels `aarch64`.
+- `test` SUCCESS (job 135142289604): `13 passed, 1 warning in 2.68s`.
+- `browser-e2e` SUCCESS (job 135142289338): `Browser E2E PASS with real backend, upload, admin and both viewports`.
+- Socket Security: PR Alerts e Project Report PASS.
 
 ### Limitações e riscos
 
