@@ -1,25 +1,62 @@
-# Deployment
-Local: Python virtualenv + uvicorn. VPS: `docker compose`, com `data/` volume persistente e reverse proxy TLS. Defina senha de admin antes do deploy. Coloque `COOKIE_SECURE=1` sob HTTPS; não publique HTTP sem TLS. Backup deve copiar `data/goodz.sqlite3` de modo consistente (preferir SQLite online backup) e `data/uploads/`. Restauração: parada de container, restaurar DB e uploads e subir novamente. Configure domínio/HTTPS/URL de produção somente com autorização do proprietário. **Status: deployment público não realizado**.
+# Publicação da GOODZ
 
+O domínio definitivo, o host de produção e os destinos de pedido aguardam confirmação. O exemplo usa `site.example.invalid`. A qualificação de CI em ambiente descartável cobre TLS local, recuperação local de SQLite e uploads, reinício do contêiner e jornada do painel. [Evidências anteriores](https://github.com/KayzenRoot/goodz-site/actions/runs/44335563382)
 
-## Próximo gate de HTTPS (PREPARADO, NÃO EXECUTADO)
+## Preparar a versão no servidor Linux
 
-**Bloqueado** até o proprietário fornecer/aprovar domínio, host final e links comerciais reais. Sem alteração de DNS, sem deploy, sem segredo persistido no Git.
+1. Defina `COMPOSE_PROJECT_NAME=goodz` no ambiente operacional ou em arquivo de ambiente fora do checkout e use o mesmo nome ao atualizar. O nome identifica o volume persistente. Registre o commit aprovado e mantenha a imagem da versão anterior no host.
+2. No checkout limpo do commit aprovado, execute os comandos abaixo. Inicialize a senha no terminal interativo privado durante o primeiro provisionamento. Em atualizações, preserve a conta operacional e faça backup antes de trocar a imagem.
 
-1. No host aprovado, criar usuário administrativo operacional, firewall com SSH restrito e 80/443 públicos; a aplicação mantém somente `127.0.0.1:8000:8000` atrás de Caddy ou Nginx.
-2. Emitir certificado TLS válido para o domínio aprovado; usar redirecionamento HTTP→HTTPS, HSTS somente após validar o domínio, cabeçalhos CSP já emitidos pela aplicação e limite de requisição no proxy de no máximo 9 MiB. Ajustar overhead caso necessário em teste de upload.
-3. Definir `COOKIE_SECURE=1` no ambiente da aplicação e inicializar uma senha **privada de pelo menos 12 caracteres** pelo comando interativo. Não enviar senha ou segredos ao repositório/PR.
-4. Configurar links iFood/99Food e redes sociais via painel; verificar que são URLs reais aprovadas. Não inventar contatos ou preços.
-5. Backup consistente do SQLite via `sqlite3.Connection.backup()` e cópia sincronizada dos uploads; guardar fora do host, cifrar e testar restauração em uma instância isolada antes de produção. Preservar versões de backup e plano de rollback.
-6. Gates: CI PASS, Docker build real, revisão independente da autenticação, teste de login/CSRF/upload/CRUD com backend real em HTTPS, tela mobile/desktop, cookies `Secure`/`HttpOnly`/`SameSite=Strict`, teste de upload acima de 8 MB, cabeçalhos, verificações `/health` e `/api/site`, backup/restore verificado e smoke test sem erros.
-7. Fazer rollback sem expor credenciais: desligar tráfego do app, restaurar versão de imagem/backup da aplicação isoladamente e revalidar a saúde e o conteúdo; reversão de DNS só com autorização explícita.
+```bash
+export COMPOSE_PROJECT_NAME=goodz
+export GOODZ_RELEASE=$(git rev-parse HEAD)
+docker compose config --quiet
+docker compose build site
+docker compose run --rm site python -m app.cli set-password
+docker compose up -d --no-build
+curl -fsS http://127.0.0.1:8000/health
+curl -fsS http://127.0.0.1:8000/api/site
+```
 
-**O limite de upload do middleware usa Content-Length e não substitui o limite do reverse proxy.** Não aceitar tráfego público sem limite independente configurado e verificado. A rota `/health` só indica processo vivo, não confirma integridade do banco, portanto verifique também `/api/site` no smoke test.
+A raiz do contêiner é somente leitura. O volume em `/app/data` persiste SQLite e imagens. `/tmp` é temporário e a porta atende em loopback. O padrão é `COOKIE_SECURE=1`. Somente para desenvolvimento HTTP em loopback, exporte `COOKIE_SECURE=0` antes de subir o ambiente local.
 
+## Ativar o proxy e verificar o domínio
 
-## Gates de qualificação reproduzidos no CI (não são deploy)
-- Run https://github.com/KayzenRoot/goodz-site/actions/runs/44335011085: jobs test/container/browser-e2e SUCCESS (dados de teste e loopback).
-- test: 13/13 Python 3.12, regressões auth e Origin, TLS autoassinado, recuperação SQLite WAL + uploads, compilação e sintaxe JavaScript.
-- container: docker build, docker compose config, runtime user goodz sem privilégios, rootfs somente leitura, porta 127.0.0.1 e persistência de configuração após reinício.
-- browser-e2e: Chrome do Ubuntu 24.04, Uvicorn real em localhost, fluxo login/edição/upload/produto/logout e verificação desktop/mobile. Screenshots no artefato do workflow.
-- Exposição pública: BLOQUEADA. Ainda exigidos: domínio e links reais aprovados; proxy reverso em TLS com cadeia válida, redirect e HSTS; configuração de COOKIE_SECURE=1; rate limit que preserve IP real apenas atrás de proxy de confiança; limite de corpo no proxy; backup periódico criptografado fora do host, restauração ensaiada em destino isolado; verificação de segurança independente e smoke-test HTTPS de produção autorizado. Proibir mudança de DNS, credenciais reais ou publicação enquanto D003-D006 estiverem pendentes.
+Use Nginx diretamente no host. Restrinja o acesso SSH e libere publicamente apenas as portas da web. Crie o registro DNS aprovado apontando para o host autorizado. Confirme os destinos IPv4 e IPv6 publicados e a titularidade do domínio. Providencie o certificado para o domínio exato e configure sua renovação, por exemplo com o cliente ACME do host. Para o primeiro certificado com webroot, ative inicialmente apenas o bloco HTTP com o caminho do desafio gravável pelo cliente ACME.
+
+Substitua todas as ocorrências de `site.example.invalid` em uma cópia de `ops/goodz.nginx.conf`, ajuste os caminhos do certificado, instale a configuração no host e valide com `nginx -t` antes do reload. Confira no navegador a cadeia TLS, o redirecionamento e o HSTS. O proxy limita o corpo a 9 MiB e substitui os cabeçalhos de encaminhamento pelo protocolo e IP observados na conexão. Esse exemplo pressupõe tráfego direto ao Nginx.
+
+Descubra o endereço do gateway da rede do serviço com `docker inspect "$(docker compose ps -q site)" --format '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}'`. Em uma ponte Docker dedicada, confirme em homologação que é o par TCP visto pelo Uvicorn para conexões vindas do Nginx. Defina `GOODZ_PROXY_IP` com esse IP individual e recrie o serviço. Valide que dois clientes de IP distintos produzem identificação distinta no aplicativo e que cabeçalhos enviados pelo visitante não mudam essa identificação. Restrinja o acesso de usuários e contêineres locais ao host.
+
+Antes de abrir tráfego, valide login, alteração de texto, senha e logout, atributos Secure/HttpOnly/SameSite, upload aceito e limite do proxy. Faça o teste com dados descartáveis na homologação. No domínio final, confira saúde e dados, as fotos, os dois destinos de pedido oficiais e os resultados do primeiro backup.
+
+## Backup fora do host
+
+O script foi preparado para Bash/Linux, Compose, flock e restic. No servidor, configure um repositório restic fora da VPS com credencial de escopo limitado. Gere a senha do repositório fora do Git, guarda independente para recuperação e arquivo legível apenas pelo operador. Configure `RESTIC_REPOSITORY`, `RESTIC_PASSWORD_FILE`, as credenciais do backend e `GOODZ_BACKUP_TMP` (diretório privado em disco cifrado, com espaço para o volume). Inicialize o repositório novo uma única vez com `restic init`.
+
+No diretório da versão, use o mesmo projeto Compose, imagem e ambiente do deploy. Rode `bash ops/backup.sh`. O script para brevemente a aplicação, copia o volume em repouso, reinicia o serviço e envia o arquivo ao repositório cifrado. Há interrupção durante a cópia local. Um erro de transporte encerra com falha. Após interrupção do host, confira a aplicação e remova arquivos temporários residuais somente após confirmar os caminhos. Agende a execução pelo timer ou cron do operador em horário aprovado, com alerta para código de saída diferente de zero e para ausência de snapshots recentes. Defina a retenção com o responsável, valide `restic snapshots --tag goodz` e execute `restic check` periodicamente.
+
+## Ensaio de restauração e rollback
+
+Use no ensaio uma máquina de recuperação e uma cópia confiável da imagem. Escolha um snapshot com a tag goodz e confirme a versão da aplicação associada no registro operacional. Guarde o ID do snapshot, a versão e o horário de cada implantação. Use um projeto Compose novo e porta em loopback diferente. O comando abaixo aceita um volume novo com a pasta uploads vazia criada pela imagem. Extrai apenas em volume isolado e impede sobrepor um banco existente.
+
+```bash
+set -eo pipefail
+export COMPOSE_PROJECT_NAME=goodzdrill$(date +%s)
+export GOODZ_PORT=18080
+: "${GOODZ_RELEASE:?defina a versão da imagem restaurada}"
+: "${SNAPSHOT:?defina o ID do snapshot conferido}"
+restic dump "$SNAPSHOT" /goodz.tar | docker compose run --rm -T --no-deps site sh -ec \
+  'cd /app/data; test ! -e goodz.sqlite3; tar -xf -; test -s goodz.sqlite3'
+docker compose run --rm -T site python -c "import sqlite3; db=sqlite3.connect('/app/data/goodz.sqlite3'); assert db.execute('pragma integrity_check').fetchall()==[('ok',)]"
+docker compose run --rm site python -m app.cli set-password
+docker compose up -d --no-build
+curl -fsS http://127.0.0.1:18080/health
+curl -fsS http://127.0.0.1:18080/api/site
+```
+
+Use a senha operacional vigente no procedimento interativo para invalidar sessões do snapshot. Confira um produto conhecido e sua imagem, abra o painel via HTTPS em homologação e registre o tempo total e a data do conteúdo recuperado. Para rollback apenas de imagem, retome o projeto original e a tag anterior, preserve o volume somente se o esquema continuar compatível e execute `docker compose up -d --no-build`. Caso os dados também exijam recuperação, mantenha o serviço afetado fora de tráfego, restaure em projeto novo pelo procedimento acima e aponte o proxy ao serviço recuperado somente após o aceite. Registre alterações posteriores ao snapshot a reconciliar e preserve o volume anterior.
+
+## Dependências
+
+As versões e hashes de produção em `requirements.txt` são gerados a partir de `ops/requirements.in`. O arquivo de desenvolvimento fixa também as dependências de teste com as mesmas restrições de produção. Para atualizar, rode os comandos de geração escritos nos cabeçalhos dos dois arquivos, execute `pip-audit -r requirements.txt --disable-pip --no-deps` e revalide CI, imagens e uploads antes da publicação.

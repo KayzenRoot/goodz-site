@@ -37,7 +37,9 @@ jobs:
           python-version: '3.12'
           cache: pip
       - name: Install backend and Playwright
-        run: pip install -r requirements-dev.txt playwright==1.57.0
+        run: |
+          pip install -r requirements-dev.txt
+          pip install playwright==1.57.0
       - name: Verify preinstalled Chrome
         run: google-chrome --version
       - name: Live backend desktop/mobile E2E

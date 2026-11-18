@@ -190,7 +190,8 @@ def create_app(data_path: Path | None = None) -> FastAPI:
         if not row or row['expires_at'] <= int(time.time()):
             raise HTTPException(401, 'Sessão expirada.')
         if csrf:
-            if not hmac.compare_digest(request.headers.get('x-csrf-token', ''), row['csrf_token']):
+            submitted = request.headers.get('x-csrf-token', '')
+            if not submitted.isascii() or not hmac.compare_digest(submitted, row['csrf_token']):
                 raise HTTPException(403, 'Token CSRF inválido.')
             origin = request.headers.get('origin') or request.headers.get('referer')
             expected_scheme = 'https' if os.environ.get('COOKIE_SECURE') == '1' else request.url.scheme

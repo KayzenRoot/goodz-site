@@ -36,6 +36,10 @@ def test_unconfigured_admin_and_auth(client, tmp_path):
     assert 'samesite=strict' in result.headers['set-cookie'].lower()
     token=result.json()['csrf']
     assert client.get('/api/admin/state').json()['csrf']==token
+    before = client.get('/api/site').json()['settings']
+    bad_header = [(b'x-csrf-token', 'inválido'.encode())]
+    assert client.put('/api/admin/settings', headers=bad_header, json={'values': {'hero_title': 'Novo'}}).status_code == 403
+    assert client.get('/api/site').json()['settings'] == before
     assert client.put('/api/admin/settings',json={'values':{'hero_title':'Novo'}}).status_code==403
     assert client.put('/api/admin/settings',headers={'x-csrf-token':'errado'},json={'values':{'hero_title':'Novo'}}).status_code==403
     ok=client.put('/api/admin/settings',headers={'x-csrf-token':token},json={'values':{'hero_title':'Novo'}})

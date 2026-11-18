@@ -2,7 +2,7 @@
 
 Site institucional da marca GOODZ, com duas frentes independentes: **GOODZ Pastelaria** (iFood) e **GOODZ Dogueria** (99Food). Linguagem visual premium em grafite, dourado e creme, baseada na arte selecionada pelo proprietário.
 
-**Estado:** primeira versão funcional local, 13/13 testes automatizados PASS, CI Docker e E2E com backend real PASS e imagens prévias desktop/mobile inspecionadas; **não está publicada na internet**. Não há URL oficial, preços nem WhatsApp inventados. Configure os links reais no painel.
+**Situação em 18/11/2026.** A vitrine abre com as duas especialidades. O painel controla fotos, produtos e canais. A publicação aguarda domínio, hospedagem e conteúdo comercial confirmados.
 
 ## Início rápido (Python 3.12+)
 
@@ -34,7 +34,7 @@ Para exposição pública, configure **um reverse proxy HTTPS** (Caddy/Nginx), `
 
 1. Entre com a senha em `/admin`.
 2. Em **Identidade**, envie logos separados (PNG/WebP/JPG).
-3. Em **Banners**, troque as imagens da capa e das duas especialidades e os textos.
+3. Em **Banners**, troque a foto da seção Sobre e as imagens das duas especialidades e os textos.
 4. Em **Produtos**, crie/edite/remova produtos e envie fotografias; valores são opcionais.
 5. Em **Delivery & Redes**, configure os links reais do iFood, 99Food, Instagram, TikTok e WhatsApp.
 6. Em **Segurança**, altere a senha do administrador.

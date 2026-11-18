@@ -4,12 +4,16 @@ const setText = (id, value) => { if (byId(id) && value !== undefined) byId(id).t
 const setImage = (id, src) => { if (byId(id) && /^\/(assets|uploads)\/[\w./-]+$/.test(src || '')) byId(id).src = src; };
 function setHeroTitle(value) {
   if (!value) return;
+  if (value !== 'Sabor que merece destaque.') {
+    byId('hero-heading').textContent = value;
+    return;
+  }
   const words = value.trim().split(/\s+/);
   const h = byId('hero-heading'); h.replaceChildren();
   if (words.length < 2) { h.textContent = value; return; }
   const prefix = words.slice(0, -2).join(' ');
   if (prefix) h.append(document.createTextNode(prefix + ' '));
-  const accent = document.createElement('em'); accent.textContent = words[words.length - 2]; h.append(accent, document.createElement('br'));
+  const accent = document.createElement('em'); accent.textContent = words[words.length - 2]; h.append(accent, document.createTextNode(' '));
   const tail = words[words.length - 1], parts = tail.match(/^(.*?)([.!?])$/);
   h.append(document.createTextNode(parts ? parts[1] : tail));
   if (parts) { const dot = document.createElement('span'); dot.className = 'gold-point'; dot.textContent = parts[2]; h.append(dot); }
@@ -21,15 +25,13 @@ function renderProducts() {
   const items = products.filter(p => p.visible && (selected === 'todos' || p.category === selected));
   if (!items.length) {
     const empty = document.createElement('div'); empty.className = 'empty-products';
-    empty.textContent = 'Nossa seleção está sendo preparada. Volte em breve para descobrir os destaques GOODZ.';
+    empty.textContent = selected === 'todos' ? 'Ainda não há destaques publicados.' : 'Ainda não há destaques publicados nesta categoria.';
     target.append(empty); return;
   }
   items.forEach(p => {
     const card = document.createElement('article'); card.className = 'product-card';
     if (p.image_url) {
       const img = document.createElement('img'); img.src = p.image_url; img.alt = `Foto de ${p.name}`; img.loading = 'lazy'; card.append(img);
-    } else {
-      const placeholder = document.createElement('div'); placeholder.className = 'product-placeholder'; placeholder.textContent = p.category === 'pastelaria' ? '✦ PASTELARIA' : '✦ DOGUERIA'; card.append(placeholder);
     }
     const body = document.createElement('div'); body.className = 'product-body';
     const label = document.createElement('span'); label.className = 'product-type'; label.textContent = `GOODZ ${p.category.toUpperCase()}`;
@@ -50,6 +52,7 @@ function applyLink(id, emptyId, url) {
 }
 async function boot() {
   byId('year').textContent = new Date().getFullYear();
+  byId('retry').disabled = true;
   try {
     const res = await fetch('/api/site'); if (!res.ok) throw new Error('Falha ao carregar o conteúdo');
     const {settings:s, products:items} = await res.json();
@@ -59,10 +62,33 @@ async function boot() {
     applyLink('ifood-link','ifood-wait',s.ifood_url); applyLink('food99-link','food99-wait',s.food99_url);
     const social = byId('social-links'); social.replaceChildren();
     labelLinks.forEach(([key,name]) => { if (s[key] && /^https?:\/\//i.test(s[key])) {const a = document.createElement('a'); a.textContent = name + ' ↗'; a.href=s[key]; a.target='_blank'; a.rel='noopener noreferrer'; social.append(a);} });
-    products=items; renderProducts();
-  } catch(error) { console.error('GOODZ:', error.message); }
+    products = items;
+    renderProducts();
+    byId('load-error').hidden = true;
+    document.querySelectorAll('[data-filter]').forEach(button => button.disabled = false);
+  } catch {
+    products = [];
+    byId('product-grid').textContent = 'Destaques temporariamente indisponíveis.';
+    byId('load-error').hidden = false;
+    document.querySelectorAll('[data-filter]').forEach(button => button.disabled = true);
+  } finally {
+    byId('retry').disabled = false;
+  }
 }
-document.querySelectorAll('[data-filter]').forEach(b=> b.addEventListener('click', () => {
-  selected = b.dataset.filter; document.querySelectorAll('[data-filter]').forEach(x => x.classList.toggle('active', x === b)); renderProducts();
-}));
+
+function selectCategory(category) {
+  selected = category;
+  document.querySelectorAll('[data-filter]').forEach(button => {
+    button.setAttribute('aria-pressed', String(button.dataset.filter === category));
+  });
+  if (byId('load-error').hidden) renderProducts();
+}
+
+document.querySelectorAll('[data-filter]').forEach(button => {
+  button.addEventListener('click', () => selectCategory(button.dataset.filter));
+});
+document.querySelectorAll('[data-category]').forEach(link => {
+  link.addEventListener('click', () => selectCategory(link.dataset.category));
+});
+byId('retry').addEventListener('click', boot);
 boot();

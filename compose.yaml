@@ -1,14 +1,19 @@
 services:
   site:
     build: .
+    image: goodz-site:${GOODZ_RELEASE:-local}
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,noexec,size=32m
     environment:
-      COOKIE_SECURE: ${COOKIE_SECURE:-0}
+      COOKIE_SECURE: ${COOKIE_SECURE:-1}
+      FORWARDED_ALLOW_IPS: ${GOODZ_PROXY_IP:-127.0.0.1}
       GOODZ_DATA_DIR: /app/data
     volumes:
       - goodz_data:/app/data
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${GOODZ_PORT:-8000}:8000"
     security_opt:
       - no-new-privileges:true
     cap_drop:
