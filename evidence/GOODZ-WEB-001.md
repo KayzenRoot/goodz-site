@@ -61,3 +61,58 @@
 - Pendente: revisão independente HIGH_ASSURANCE da autenticação, verificação HTTPS com domínio/chain/HSTS e reverse proxy REAL (inclusive tamanho máximo de corpo e IP real no rate limit), proteção do painel, análise de dependências, backup offsite cifrado com recuperação na VPS, dados comerciais reais, decisões D003-D006 e autorização expressa de deploy/merge.
 - Veredito: **BLOCKED para merge, publicação e RELEASE_COMPLETE**; correções de código e gates isolados PASS. **Checkpoint Delta PROPOSED**, sem editar ou promover docs/12-checkpoint.md.
 - Riscos de regressão restantes: configuração do proxy, versões de dependência sem lock, proteção de credenciais e retenção de backups; nenhum HIGH conhecido declarado como resolvido sem prova.
+
+## Correction Delta GZ-SEC-001 F01/F02 + R01 — 18/11/2026
+
+**Autorização delimitada:** GOODZ-WEB-001/CD-01, PR #1 Draft, branch `feat/goodz-web-001-landing-admin`. Base main `953a92dd2ff34189180f794a788a562ad71f96dc`; HEAD de entrada `8c891b3388263231596984e1bfde0db1ddb8dff9`; ambos revalidados antes da edição. Sem merge, deploy, DNS, VPS, segredos ou promoção de checkpoint.
+
+### F01 — cadeia de dependências e relatórios por commit
+
+- Job `security` no workflow `GOODZ Quality` instala ferramentas CI fixadas em `ops/requirements-security.txt` (bandit 1.9.4, cyclonedx-bom 8.0.1, pip-audit 2.10.1, pip-licenses 5.5.5 e transitivas resolvidas).
+- SCA de produção (`requirements.txt`, 21 pacotes) e desenvolvimento (`requirements-dev.txt`, 29 pacotes) via pip-audit JSON.
+- SAST de `app/` via bandit JSON; o gate falha em severidade HIGH.
+- SBOM CycloneDX 1.6 com 22 componentes e inventário de licenças de 21 pacotes de produção.
+- `tools/validate_security_reports.py` falha fechado para relatório ausente/corrompido, vulnerabilidade conhecida, SAST HIGH, SBOM inválido, licença desconhecida e proveniência incompleta.
+- Artefato `goodz-security-<sha>` com retenção de 90 dias, contendo os relatórios e `provenance.json` com commit, ref, workflow e run.
+- Resultado local observado: `SCA(production) packages=21 vulnerabilities=0; SCA(development) packages=29 vulnerabilities=0; SAST findings=1 high=0; SBOM components=22; licenses packages=21 unknown=0; SECURITY_REPORTS_OK`.
+- O único achado SAST é B608 MEDIUM em `app/main.py:215`; o trecho monta `WHERE visible=1` a partir de constante interna, não de entrada do usuário. Não foi suprimido; permanece visível no relatório e não é HIGH.
+
+### F02 — imagem-base fixada e multi-arquitetura
+
+- `Dockerfile` fixa `python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b` (índice oficial 3.12.16-slim-trixie).
+- Digest confirmado de forma independente pelo header `Docker-Content-Digest` do Docker Hub e por `docker buildx imagetools inspect`.
+- `tools/verify_base_image.sh` rejeita tag sem digest, digest divergente e ausência de `linux/amd64`/`linux/arm64`; executado localmente: `BASE_IMAGE_OK digest=sha256:5e2bdb… platforms=linux/amd64,linux/arm64 python=3.12`.
+- Job `container` passa a rodar a verificação, o smoke e o build real em `ubuntu-latest` (amd64) e `ubuntu-24.04-arm`.
+- Reprodutibilidade de dependências: `tools/check_image_reproducibility.sh` compara Python e closure de pacotes entre o build do smoke e um rebuild `--no-cache`; local `IMAGE_REPRO_OK packages=23`. Não é alegada reprodutibilidade bit-a-bit de camadas.
+- Build amd64: smoke PASS (build, loopback, nonroot, rootfs read-only, SQLite persistente após restart).
+- Build arm64 por emulação local: `python:3.12.16`, `aarch64`; container read-only com volume respondeu `/health` 200 em 18 s. A execução nativa arm64 será comprovada pelo CI do runner arm.
+
+### R01 — especificação apenas, não executada
+
+- `docs/14-proxy-qualification-plan.md` define PX-01..PX-12 para bypass do proxy, Host, X-Forwarded-For/Proto/Host, rate limit por IP real, limites de corpo no proxy/app, chunked, Origin/Referer, IPv6, reinício e TLS/HSTS.
+- Status explícito `SPECIFICATION_ONLY / NOT_RUN`; nenhum teste de proxy, IP real ou borda foi executado e nenhum PASS é reivindicado.
+
+### Testes locais observados
+
+- `PYTHONPATH=. pytest -q`: **13 passed**, 1 warning (mesmo warning Starlette/httpx anterior).
+- `python -m compileall -q app tests tools`: PASS.
+- `node --check static/scripts/admin.js` e `site.js`: PASS.
+- `bash -n` dos dois novos scripts: PASS.
+- `tools/validate_security_reports.py`: PASS com relatórios reais e FAIL fechado nos quatro casos negativos testados (vulnerabilidade sintética, SAST HIGH sintético, licença desconhecida e relatório ausente).
+- `tools/ci_docker_smoke.sh`: PASS com `GITHUB_RUN_ID` definido; a invocação local sem a variável produz nome de volume inválido, comportamento pré-existente do harness, não introduzido por este delta.
+- `tools/check_image_reproducibility.sh`: PASS.
+- Docker build arm64 por emulação: PASS e health 200.
+
+### Limitações e riscos
+
+- Relatórios CI serão os autoritativos por HEAD e run; valores locais acima não substituem o run remoto.
+- SAST cobre `app/` com bandit, não toda a superfície de scripts/CI; não é prova de ausência de vulnerabilidades.
+- SCA depende das bases OSV/PyPI disponíveis no momento; ausência de achado não é garantia absoluta.
+- Licenças foram inventariadas, mas D006 continua OPEN; nenhuma licença do projeto foi escolhida ou ratificada.
+- Arm64 local foi emulado; a prova nativa depende do runner CI correspondente.
+- R01 permanece NOT_RUN; proxy real, IP real, Host, rate limit e limites de borda continuam gate de homologação.
+- Não há alegação de RELEASE_COMPLETE, merge, deploy ou segurança integral.
+
+### Checkpoint Delta PROPOSED (não promovido)
+
+Registrar que F01/F02 foram implementados e provados em CI no HEAD deste delta, com artefato por commit e digest verificado; manter R01 NOT_RUN, D003 PROPOSED, D004-D006 OPEN, deploy/merge bloqueados e `docs/12-checkpoint.md` intacto até auditoria e autorização posteriores.

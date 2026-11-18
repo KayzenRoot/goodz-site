@@ -60,3 +60,7 @@ Use a senha operacional vigente no procedimento interativo para invalidar sessõ
 ## Dependências
 
 As versões e hashes de produção em `requirements.txt` são gerados a partir de `ops/requirements.in`. O arquivo de desenvolvimento fixa também as dependências de teste com as mesmas restrições de produção. Para atualizar, rode os comandos de geração escritos nos cabeçalhos dos dois arquivos, execute `pip-audit -r requirements.txt --disable-pip --no-deps` e revalide CI, imagens e uploads antes da publicação.
+
+O CI `GOODZ Quality` gera, por commit, relatórios de SCA (`pip-audit`), SAST (`bandit`), SBOM CycloneDX, inventário de licenças e proveniência no artefato `goodz-security-<sha>`. A ausência, corrupção ou vulnerabilidade conhecida em qualquer relatório reprova o job `security`; um achado HIGH de SAST também reprova. Não substituir esse gate por inspeção manual.
+
+A imagem-base `python:3.12-slim` é fixada por digest multi-arquitetura no `Dockerfile`. Toda atualização deve ser feita em PR próprio do mesmo Work Order, verificar o digest oficial e as plataformas `linux/amd64` e `linux/arm64` com `bash tools/verify_base_image.sh`, reconstruir com `--no-cache`, executar o smoke e o teste de reprodutibilidade de dependências, e registrar o novo digest na evidência antes de publicar. Não trocar o digest por conveniência sem essa cadeia.

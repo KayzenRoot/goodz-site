@@ -1,0 +1,4 @@
+bandit==1.9.4
+cyclonedx-bom==8.0.1
+pip-audit==2.10.1
+pip-licenses==5.5.5
