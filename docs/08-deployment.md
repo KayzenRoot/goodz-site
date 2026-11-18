@@ -1,0 +1,2 @@
+# Deployment
+Local: Python virtualenv + uvicorn. VPS: `docker compose`, com `data/` volume persistente e reverse proxy TLS. Defina senha de admin antes do deploy. Coloque `COOKIE_SECURE=1` sob HTTPS; não publique HTTP sem TLS. Backup deve copiar `data/goodz.sqlite3` de modo consistente (preferir SQLite online backup) e `data/uploads/`. Restauração: parada de container, restaurar DB e uploads e subir novamente. Configure domínio/HTTPS/URL de produção somente com autorização do proprietário. **Status: deployment público não realizado**.

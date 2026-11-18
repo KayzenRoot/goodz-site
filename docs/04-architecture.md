@@ -1,0 +1,2 @@
+# Architecture
+FastAPI monolítico (Python 3.12+), páginas HTML/CSS/JS estáticas sem CDN; API JSON `/api/site` pública e `/api/admin/*` protegida; SQLite transacional; upload com Pillow convertido em WebP armazenado sob `data/uploads/`. Logo inicial da arte selecionada em assets locais. Uma instância/worker de aplicação para a primeira versão. Não usar SQLite em volume remoto não confiável. UI pública não interpreta HTML de entrada como markup.

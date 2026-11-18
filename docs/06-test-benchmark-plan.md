@@ -1,0 +1,2 @@
+# Test & Benchmark Plan
+Unit/API: home 200, cadastro inicial inativo, login sucesso/falha, sessão e CSRF, update config, links inválidos, upload imagem válido/inválido, CRUD de produtos, senha, logout, bloqueio de ações anônimas. E2E visual: screenshots desktop e mobile com Chromium headless. Bench: foco em imagens otimizadas; não inventar métricas de laboratório. Alvos operacionais futuros: Lighthouse mobile >=85 com fotos reais otimizadas; não qualificado nesta versão.
