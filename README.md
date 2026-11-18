@@ -2,7 +2,7 @@
 
 Site institucional da marca GOODZ, com duas frentes independentes: **GOODZ Pastelaria** (iFood) e **GOODZ Dogueria** (99Food). Linguagem visual premium em grafite, dourado e creme, baseada na arte selecionada pelo proprietário.
 
-**Estado:** primeira versão funcional local, testes automatizados 5/5 PASS e imagens prévias desktop/mobile inspecionadas; **não está publicada na internet**. Não há URL oficial, preços nem WhatsApp inventados. Configure os links reais no painel.
+**Estado:** primeira versão funcional local, testes automatizados 7/7 PASS e imagens prévias desktop/mobile inspecionadas; **não está publicada na internet**. Não há URL oficial, preços nem WhatsApp inventados. Configure os links reais no painel.
 
 ## Início rápido (Python 3.12+)
 
@@ -16,7 +16,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 - Landing page: http://127.0.0.1:8000
 - Painel: http://127.0.0.1:8000/admin
-- Testes: `pytest -q`
+- Testes: `pip install -r requirements-dev.txt && pytest -q`
 
 A senha é definida localmente e armazenada como hash scrypt. O site não publica credenciais de demonstração. As alterações persistem em `data/goodz.sqlite3`, e as imagens enviadas ficam em `data/uploads/`.
 
@@ -46,3 +46,7 @@ Sem carrinho, pagamento, sistema de pedidos, integrações com agregadores, edit
 ## Hierarquia de fontes
 
 `docs/12-checkpoint.md` > `docs/11-decisions-ledger.md` > `docs/03-scope.md` > `docs/10-definition-of-done.md` > `docs/04-architecture.md` > `docs/02-requirements.md` > demais fontes. Arte de referência original preservada em `static/assets/reference-concept.jpg`.
+
+## Prévia visual local (opcional)
+
+Com Chromium e Playwright para Python instalados, execute `PYTHONPATH=. python tools/visual_preview.py`. Ele usa respostas de API simuladas para validar layout e navegação básica do painel; os testes reais de API ficam em `tests/`. Consulte `evidence/GOODZ-WEB-001.md`.
