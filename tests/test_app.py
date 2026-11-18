@@ -168,3 +168,15 @@ def test_upload_request_rejected_before_multipart_parsing(client, tmp_path, monk
     response = client.post('/api/admin/upload',
         headers={'x-csrf-token': token, 'origin': 'https://evil.example'}, files=file)
     assert response.status_code == 403
+
+
+def test_malformed_origin_rejected_with_403(client, tmp_path):
+    with connect(tmp_path/'goodz.sqlite3') as db:
+        db.execute('INSERT INTO admin_auth VALUES(1,?)', (password_hash('uma-senha-muito-forte-123'),))
+    token = login(client).json()['csrf']
+    for header in ({'origin': 'https://[bad'}, {'referer': 'https://[bad'}):
+        response = client.put('/api/admin/settings',
+            headers={'x-csrf-token': token, **header},
+            json={'values': {'hero_title': 'não deve alterar'}})
+        assert response.status_code == 403
+    assert client.get('/api/site').json()['settings']['hero_title'] == 'Sabor que merece destaque.'

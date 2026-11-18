@@ -194,8 +194,14 @@ def create_app(data_path: Path | None = None) -> FastAPI:
                 raise HTTPException(403, 'Token CSRF inválido.')
             origin = request.headers.get('origin') or request.headers.get('referer')
             expected_scheme = 'https' if os.environ.get('COOKIE_SECURE') == '1' else request.url.scheme
-            if origin and (urlsplit(origin).scheme != expected_scheme or urlsplit(origin).netloc != request.headers.get('host')):
-                raise HTTPException(403, 'Origem não permitida.')
+            if origin:
+                try:
+                    parsed_origin = urlsplit(origin)
+                except ValueError:
+                    raise HTTPException(403, 'Origem não permitida.') from None
+                if (parsed_origin.scheme != expected_scheme
+                        or parsed_origin.netloc != request.headers.get('host')):
+                    raise HTTPException(403, 'Origem não permitida.')
         return row
 
     def read_settings():
