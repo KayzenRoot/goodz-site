@@ -2,7 +2,7 @@
 
 Site institucional da marca GOODZ, com duas frentes independentes: **GOODZ Pastelaria** (iFood) e **GOODZ Dogueria** (99Food). Linguagem visual premium em grafite, dourado e creme, baseada na arte selecionada pelo proprietário.
 
-**Estado:** primeira versão funcional local, testes automatizados 7/7 PASS e imagens prévias desktop/mobile inspecionadas; **não está publicada na internet**. Não há URL oficial, preços nem WhatsApp inventados. Configure os links reais no painel.
+**Estado:** primeira versão funcional local, testes automatizados 11/11 PASS e imagens prévias desktop/mobile inspecionadas; **não está publicada na internet**. Não há URL oficial, preços nem WhatsApp inventados. Configure os links reais no painel.
 
 ## Início rápido (Python 3.12+)
 

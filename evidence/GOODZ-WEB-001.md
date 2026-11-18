@@ -24,3 +24,11 @@
 - Tentativa de navegador real contra serviço local bloqueada pelo runtime com `net::ERR_BLOCKED_BY_ADMINISTRATOR`; NÃO há E2E autenticado HTTP real aprovado. Visual anterior é preview com API simulada e permanece como tal.
 - Docker disponível neste runtime: **não**, portanto imagem/compose não foram executados; não afirmar integração Docker aprovada.
 - Veredito antes de auditoria independente: **CORRECTION PROPOSED / PUBLIC_DEPLOY_BLOCKED**, sem merge, sem deploy, sem atualização de checkpoint como concluído. Checkpoint Delta proposto: adicionar correções testadas e riscos residuais; DoD global incompleto.
+
+
+## Readback de CI e smoke HTTP (18/11/2026)
+- GOODZ-WEB-001/CD-01 aplicado no mesmo PR #1; commit corretivo inicial: \`ed2a201058b4f1ba11a4af9cd247fb94b1fb6bdb\`; `main` permanece no Source Pack `953a92dd2ff34189180f794a788a562ad71f96dc`.
+- GitHub Actions run `44328778898`: **SUCCESS**, job `test` SUCCESS, log `11 passed, 1 warning in 2.28s`; build/execução Docker não está coberto pelo workflow.
+- Com Uvicorn HTTP local real e cliente httpx (sem simular API): inicialização CLI, autenticação, CSRF, alteração de texto, upload PNG→WebP, CRUD de produto, logout e persistência SQLite **PASS**. Dados de teste foram criados em diretório temporário, sem produção.
+- Chromium E2E com servidor real **BLOCKED PELO AMBIENTE** (`ERR_BLOCKED_BY_ADMINISTRATOR`). Não reivindicar prova de navegador real.
+- Auditoria de segurança HIGH_ASSURANCE: revisão independente pendente; verificação de TLS/HSTS, cookie Secure sob domínio real, backup/restauração, limites do proxy, vulnerabilidades de dependências e smoke de recuperação continuam como gates explícitos. Sem autorização para publicar ou fundir PR.
